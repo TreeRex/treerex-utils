@@ -1,6 +1,12 @@
 # treerex-utils
 
-Treerex-utils are a collection of Common Lisp functions and macros that I find myself using over and over again. They are probably of no use to anyone but me.
+Treerex-utils are a collection of Common Lisp functions and macros that I find
+myself using over and over again. They are probably of no use to anyone but
+me.
+
+I use Clozure CL primarily, so it is possible that these won't work with other
+Lisp implementations without some modification. However, I also use SBCL on a
+regular basis so it is likely these will work there too.
 
 ## Installation
 

@@ -5,7 +5,19 @@
   (:use #:cl)
   (:shadowing-import-from #:cl-ppcre
                           #:split)
-  (:export #:with-delimited-file
-           #:ideographicp
-           #:hangulp))
+  (:export
+   ;; File utilities
+   #:with-delimited-file
+   ;; Text Utilities
+   #:trim-whitespace
+   #:last-char
+   #:first-char
+   ;; CJK Text Utilities
+   #:ideographicp
+   #:hangulp
+   #:kanap
+   #:katakana-only-p
+   #:hiragana-only-p
+   #:kana-only-p
+))
 
