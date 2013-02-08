@@ -13,6 +13,8 @@
    #:trim-whitespace
    #:last-char
    #:first-char
+   #+CCL #:get-utf-8-bytes-for-string
+   #:decode-escaped-utf-8-string
    ;; CJK Text utilities
    #:ideographicp
    #:hangulp

@@ -36,6 +36,35 @@ or nil if S is nil."
   "Returns the first character in the string S."
   (char s 0))
 
+;; this does not handle surrogate pairs or characters outside the BMP
+(defun get-utf-8-bytes-for-string (s)
+  "Return a list of the bytes in the UTF-8 encoding for S."
+  (loop for c across s
+       with result = '()
+       do (let ((usv (char-code c)))
+            (cond ((< usv #x80)
+                   (push usv result))
+                  ((< usv #x800)
+                   (push (logior #b11000000 (ldb (byte 5 6) usv)) result)
+                   (push (logior #b10000000 (ldb (byte 6 0) usv)) result))
+                  ((< usv #x10000)
+                   (push (logior #b11100000 (ldb (byte 4 12) usv)) result)
+                   (push (logior #b10000000 (ldb (byte 6 6) usv)) result)
+                   (push (logior #b10000000 (ldb (byte 6 0) usv)) result))
+                  (t (error "Characters outside the BMP are not supported"))))
+       finally (return (nreverse result))))
+
+#+CCL
+(defun decode-escaped-utf-8-string (s)
+  "Given a string S containing ASCII characters and escaped 8-bit characters in the form
+\[A-F0-9]{2} this function converts it into UTF-8."
+  (let ((array (make-array 128 :fill-pointer 0 :adjustable t :element-type '(unsigned-byte 8))))
+    (cl-ppcre:do-matches-as-strings (m "(\\\\[A-F0-9]{2})|([^\\\\]{1})" s)
+      (cond ((char= (char m 0) #\\)
+             (vector-push-extend (parse-integer m :start 1 :radix 16) array))
+            (t (vector-push-extend (char-code (char m 0)) array))))
+    (ccl::decode-string-from-octets array :external-format :UTF-8)))
+
 ;;{{{ ^-- CJK predicates
 
 (declaim (inline ideographicp hangulp kanap katakana-only-p
@@ -111,6 +140,8 @@ reflects the real-world usage where the data coming in may be corrupted or
 otherwise bogus. It is left to the expander to deal with the actual values."
   (cl-ppcre:regex-replace-all "&((?i:[a-z]+)|(?i:#x?[0-9a-fA-F]+));?" s
                               #'entity-expander :simple-calls t))
+
+;;}}}
 
 ;;}}}
 
