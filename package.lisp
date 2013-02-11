@@ -2,13 +2,11 @@
 
 (defpackage #:treerex-utils
   (:documentation "The treerex-utils package.")
-  (:use #:cl)
+  (:use #:cl #:cl-ppcre #:alexandria)
   (:nicknames :tru)
-  (:shadowing-import-from #:cl-ppcre
-                          #:split)
   (:export
    ;; File utilities
-   #:with-delimited-file
+   #:with-fields-in-file
    ;; Text Utilities
    #:trim-whitespace
    #:last-char

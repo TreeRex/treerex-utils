@@ -2,22 +2,6 @@
 
 (in-package #:treerex-utils)
 
-;;{{{ File Utilities
-
-(defmacro with-delimited-file ((var separator filename) &body body)
-  (let ((in (gensym))
-        (line (gensym)))
-    `(with-open-file (,in ,filename :direction :input
-                          :external-format
-                          #+(or sbcl lispworks) :utf-8
-                          #+ccl '(:character-encoding :utf-8))
-       (loop for ,line = (read-line ,in nil)
-            while ,line
-          do (let ((,var (split ,separator ,line)))
-               ,@body)))))
-
-;;}}}
-
 ;;{{{ Text Utilities
 
 (declaim (inline trim-whitespace last-char first-char))
@@ -59,7 +43,7 @@ or nil if S is nil."
   "Given a string S containing ASCII characters and escaped 8-bit characters in the form
 \[A-F0-9]{2} this function converts it into UTF-8."
   (let ((array (make-array 128 :fill-pointer 0 :adjustable t :element-type '(unsigned-byte 8))))
-    (cl-ppcre:do-matches-as-strings (m "(\\\\[A-F0-9]{2})|([^\\\\]{1})" s)
+    (do-matches-as-strings (m "(\\\\[A-F0-9]{2})|([^\\\\]{1})" s)
       (cond ((char= (char m 0) #\\)
              (vector-push-extend (parse-integer m :start 1 :radix 16) array))
             (t (vector-push-extend (char-code (char m 0)) array))))
@@ -67,7 +51,7 @@ or nil if S is nil."
 
 ;;{{{ ^-- CJK predicates
 
-(declaim (inline ideographicp hangulp kanap katakana-only-p
+(declaim (inline char--code ideographicp hangulp kanap katakana-only-p
                  hiragana-only-p kana-only-p))
 
 (defun char--code (c)
@@ -138,8 +122,8 @@ entities is quite forgiving, insofar as the trailing ';' is optional and the
 number of numerals/letters allowed in a numeric entity is unbounded. This
 reflects the real-world usage where the data coming in may be corrupted or
 otherwise bogus. It is left to the expander to deal with the actual values."
-  (cl-ppcre:regex-replace-all "&((?i:[a-z]+)|(?i:#x?[0-9a-fA-F]+));?" s
-                              #'entity-expander :simple-calls t))
+  (regex-replace-all "&((?i:[a-z]+)|(?i:#x?[0-9a-fA-F]+));?" s
+                     #'entity-expander :simple-calls t))
 
 ;;}}}
 
@@ -154,5 +138,49 @@ otherwise bogus. It is left to the expander to deal with the actual values."
       (get-decoded-time)
     (declare (ignore dst-p day-of-week second))
     (format nil "~d/~2,'0d/~2,'0d ~2,'0d:~2,'0d GMT~@d" year month date hour minute (- tz))))
+
+;;}}}
+
+;;{{{ File Utilities
+
+(defun normalize-var-list (var-list)
+  "Utility function used by WITH-FIELDS-IN-FILE to normalize
+VAR-LIST to add #'identity to variable specs without a func."
+  (loop for (var column func) in var-list
+       collect (list var column
+                     (or func '(function identity)))))
+
+(defmacro with-fields-in-file (var-list (filename &key
+                                                  (encoding :utf-8)
+                                                  skip-header
+                                                  (comment-char #\#)
+                                                  (field-separator "\\t"))
+                               &body body)
+  "Executes BODY with the variables in VAR-LIST bound to the specified fields
+on each line in the file FILENAME. Blank lines are ignored. Fields are
+separated by the regular expresion specified by :FIELD-SEPARATOR, which
+defaults to \"\\\\t\". By default lines starting with #\# are ignored, but
+this can be changed with :COMMENT-CHAR. If :SKIP-HEADER is T, the first
+non-comment, non-blank line is skipped. Leading and trailing whitespace is
+stripped from each line. The file's character encoding defaults to :UTF-8 but
+can be changed with :ENCODING.
+
+VAR-LIST is a list of lists specifying (VAR FIELD-OFFSET [FUNC]). VAR is the
+variable to which the value of the field at FIELD-OFFSET is bound (0-based).
+FUNC is an optional function designator that takes a single argument, the
+field value, and the value of FUNC is bound to VAR."
+  (with-gensyms (in line skipped-header fields)
+    `(with-open-file (,in ,filename :direction :input :external-format ,encoding)
+       (loop for ,line = (trim-whitespace (read-line ,in nil nil))
+            with ,skipped-header = nil
+            while ,line do
+            (when (and (> (length ,line) 0)
+                       (char/= (char ,line 0) ,comment-char))
+              (if (and (not ,skipped-header) ,skip-header)
+                  (setq ,skipped-header t)
+                  (let* ((,fields (split ,field-separator ,line))
+                         ,@(loop for (var column func) in (normalize-var-list var-list)
+                              collect `(,var (funcall ,func (nth ,column ,fields)))))
+                    ,@body)))))))
 
 ;;}}}
