@@ -5,7 +5,7 @@
   :description "Miscellaneous utilities I find myself using over and over..."
   :author "Tom Emerson <tremerson@gmail.com>"
   :license "MIT"
-  :depends-on (#:cl-ppcre)
+  :depends-on (#:cl-ppcre #:alexandria)
   :encoding :utf-8
   :components ((:file "package")
                (:file "w3c-entities")
