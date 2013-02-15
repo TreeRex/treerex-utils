@@ -99,9 +99,16 @@ or nil if S is nil."
 ;;{{{ ^-- XML/HTML Related
 
 (define-condition unknown-entity-error (error)
-  ((entity :initarg :entity :reader entity)))
+  ((entity :initarg :entity :reader unknown-entity-string))
+  (:report (lambda (condition stream)
+             (format stream "Unknown entity \"~A\"" (unknown-entity-string condition))))
+  (:documentation "Signaled if ENTITY-EXPANDER is unable to find the specified entity."))
+
+(setf (documentation 'unknown-entity-string 'function)
+      "Returns the unknown entity that triggered an UNKNOWN-ENTITY-ERROR.")
 
 (defun expand-numeric-entity (entity)
+  "Expand a decimal or hexadecimal numeric entity."
   (let ((hexp (char-equal #\x (char entity 1))))
     (string (code-char (parse-integer entity
                                       :start (if hexp 2 1)
@@ -109,12 +116,12 @@ or nil if S is nil."
 
 (defun entity-expander (match entity)
   (declare (ignore match))
-  (cond ((char= #\# (char entity 0))
-         (expand-numeric-entity entity))
-        (t (let ((expansion (gethash entity *ENTITY-NAMES*)))
-             (if (not expansion)
-                 (error 'unknown-entity-error :entity entity)
-                 expansion)))))
+  (if (char= #\# (char entity 0))
+      (expand-numeric-entity entity)
+      (let ((expansion (gethash entity *ENTITY-NAMES*)))
+        (if expansion expansion
+            (restart-case (error 'unknown-entity-error :entity entity)
+              (new-expansion (exp) exp))))))
 
 (defun expand-character-entities (s)
   "Expands the character entities in S. The regular expression used to match

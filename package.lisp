@@ -24,5 +24,9 @@
    #:expand-character-entities
    ;; time utilities
    #:date-time-stamp
+   ;; conditions
+   #:unknown-entity-error               ;condition
+   #:unknown-entity-string              ;accessor
+   #:new-expansion                      ;restart
 ))
 
