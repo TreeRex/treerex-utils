@@ -159,11 +159,11 @@ otherwise bogus. It is left to the expander to deal with the actual values."
       (loop for line = (read-line in nil nil)
             for line-no = 0 then (1+ line-no)
          while line do
-           (when (< line-no count)
-             (setf (aref result line-no) line)
-             (let ((m (random line-no)))
-               (when (< m count)
-                 (setf (aref result m) line))))))
+           (if (< line-no count)
+               (setf (aref result line-no) line)
+               (let ((m (random line-no)))
+                 (when (< m count)
+                   (setf (aref result m) line))))))
     result))
 
 (defun normalize-var-list (var-list)
