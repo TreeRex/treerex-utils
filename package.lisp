@@ -6,6 +6,7 @@
   (:nicknames :tru)
   (:export
    ;; File utilities
+   #:sample-lines-from-file
    #:with-fields-in-file
    ;; Text Utilities
    #:trim-whitespace

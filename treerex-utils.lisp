@@ -40,8 +40,9 @@ or nil if S is nil."
 
 #+CCL
 (defun decode-escaped-utf-8-string (s)
-  "Given a string S containing ASCII characters and escaped 8-bit characters in the form
-\[A-F0-9]{2} this function converts it into UTF-8."
+  "Given a UTF-8 string represented as 7-bit ASCII characters with escaped
+8-bit characters in the form \[A-F0-9]{2} this function converts it into
+a Unicode string."
   (let ((array (make-array 128 :fill-pointer 0 :adjustable t :element-type '(unsigned-byte 8))))
     (do-matches-as-strings (m "(\\\\[A-F0-9]{2})|([^\\\\]{1})" s)
       (cond ((char= (char m 0) #\\)
@@ -149,6 +150,21 @@ otherwise bogus. It is left to the expander to deal with the actual values."
 ;;}}}
 
 ;;{{{ File Utilities
+
+(defun sample-lines-from-file (filename count &key (encoding :utf-8))
+  "Returns an array of COUNT strings randomly sampled from FILENAME."
+  (let ((result (make-array count :element-type 'string)))
+    (with-open-file (in filename :direction :input :external-format encoding)
+      ;; Lines are selected using Vitter's Algorithm R.
+      (loop for line = (read-line in nil nil)
+            for line-no = 0 then (1+ line-no)
+         while line do
+           (when (< line-no count)
+             (setf (aref result line-no) line)
+             (let ((m (random line-no)))
+               (when (< m count)
+                 (setf (aref result m) line))))))
+    result))
 
 (defun normalize-var-list (var-list)
   "Utility function used by WITH-FIELDS-IN-FILE to normalize
